@@ -1,0 +1,189 @@
+﻿<UserControl x:Class="ChatClient.Views.ChatView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ChatClient.Views"
+             xmlns:vm="clr-namespace:ChatClient.ViewModels"
+             d:DataContext="{d:DesignInstance vm:ChatViewModel}"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <!--Chat-->
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition MaxWidth="350"></ColumnDefinition>
+            <ColumnDefinition Width="2*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <!--User List-->
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="60"></RowDefinition>
+                <RowDefinition></RowDefinition>
+            </Grid.RowDefinitions>
+            <!--Search Menu-->
+            <DockPanel Background="White">
+                <!--Search TextBox-->
+                <Border
+                    BorderThickness="1.7"
+                    BorderBrush="#FF1E9CD6"
+                    CornerRadius="3"
+                    Margin="10,16,10,16">
+                    <TextBox 
+                        BorderThickness="0"
+                        Text="Search"
+                        VerticalContentAlignment="Center"
+                        Padding="5,0,0,0"
+                        FontSize="14"
+                        DockPanel.Dock="Right"
+                        Foreground="#FFA2A2A2"/>
+                </Border>
+            </DockPanel>
+            <!--Users List-->
+            <ListView 
+                x:Name="UserListView"
+                HorizontalContentAlignment="Stretch"
+                BorderThickness="0" 
+                Grid.Row="1" 
+                ItemsSource="{Binding Participants}">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Height="50">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition MaxWidth="60"></ColumnDefinition>
+                                <ColumnDefinition Width="2.5*"></ColumnDefinition>
+                                <ColumnDefinition></ColumnDefinition>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition></RowDefinition>
+                                <RowDefinition></RowDefinition>
+                            </Grid.RowDefinitions>
+                            <!--Profile Image-->
+                            <Image 
+                            Source="{Binding ImgSource}"
+                            Margin="3"
+                            HorizontalAlignment="Left"
+                            Grid.RowSpan="2"/>
+                            <!--Username-->
+                            <TextBlock 
+                            Text="{Binding Name}"
+                            Grid.Column="1"
+                            Grid.Row="0"
+                            VerticalAlignment="Center" 
+                            FontSize="15" 
+                            FontFamily="Malgun Gothic" 
+                            FontWeight="Bold"/>
+                            <!--Last Message-->
+                            <TextBlock
+                            Text="{Binding LastMessage}"
+                            Grid.Column="1"
+                            Grid.Row="1"
+                            Grid.ColumnSpan="2"
+                            VerticalAlignment="Center" 
+                            Padding="0,0,0,5"
+                            Foreground="Gray"/>
+                            <!--Last Message Time-->
+                            <TextBlock 
+                            Text="{Binding LastMessageTime}"
+                            Grid.Column="2"
+                            Grid.Row="0"
+                                Padding="0,0,10,0"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right" 
+                            Foreground="Gray"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+        <Grid Grid.Column="1">
+            <Grid.Background>
+                <ImageBrush ImageSource="/Images/background.png"/>
+            </Grid.Background>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="60"></RowDefinition>
+                <RowDefinition></RowDefinition>
+                <RowDefinition Height="50"></RowDefinition>
+            </Grid.RowDefinitions>
+            <!--Error Message-->
+            <StackPanel>
+                <TextBlock Margin="0 20 0 0"
+            HorizontalAlignment="Center"
+            Foreground="DarkRed"
+            Text="{Binding ErrorMessage}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasErrorMessage}" Value="False">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </StackPanel>
+
+            <!--Chat List-->
+            <ScrollViewer x:Name="ChatScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding MyMessage}" >
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel 
+                                MaxWidth="320"
+                                Height="auto"
+                                Background="Black"
+                                HorizontalAlignment="Right"
+                                Margin="5,6">
+                                <!--Text-->
+                                <TextBlock 
+                                    Text="{Binding Text}" 
+                                    FontSize="16"
+                                    Foreground="White"
+                                    Padding="10,5,10,0"
+                                    TextWrapping="Wrap"/>
+                                <!--Time-->
+                                <TextBlock 
+                                Text="{Binding Timer}" 
+                                FontSize="8" 
+                                DockPanel.Dock="Bottom" 
+                                HorizontalAlignment="Right"
+                                Foreground="White"
+                                Padding="10,0,4,3"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <!--Message Panel-->
+            <Grid Background="White" Grid.Row="2"  x:Name="MsgBox">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="40"></ColumnDefinition>
+                    <ColumnDefinition Width="*"></ColumnDefinition>
+                    <ColumnDefinition Width="76"></ColumnDefinition>
+                </Grid.ColumnDefinitions>
+                <!--Message Box-->
+                <TextBox
+                    Grid.Column="1"
+                    HorizontalAlignment="Stretch"
+                    Padding="10"
+                    Foreground="#FFA2A2A2"
+                    FontSize="14"
+                    FontFamily="Malgun Gothic"
+                    BorderThickness="0"
+                    Text="{Binding Text, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                    VerticalAlignment="Center" 
+                    Margin="0,6"/>
+                <DockPanel Grid.Column="2 ">
+                    <!--Microphone-->
+                    <Button 
+                        Background="White"
+                        BorderThickness="0"
+                        Margin="0,14,10,14"
+                        HorizontalAlignment="Right"
+                        Command="{Binding SendTextMessageCommand}">
+                        <Image Source="/Images/sendGray.png"/>
+                    </Button>
+                </DockPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

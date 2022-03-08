@@ -1,6 +1,7 @@
 ﻿using ChatClient.Commands;
 using ChatClient.Models;
 using ChatClient.Services;
+using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -14,11 +15,11 @@ using System.Windows.Input;
 
 namespace ChatClient.ViewModels
 {
+    [AddINotifyPropertyChangedInterface]
     public class ChatViewModel: BaseViewModel
     {
         private readonly IChatService _chatService;
 
-        private ObservableCollection<Participant> _participants = new ObservableCollection<Participant>();
 
 
         #region Connect
@@ -36,9 +37,10 @@ namespace ChatClient.ViewModels
             try
             {
                 await _chatService.ConnectAsync();
+                ErrorMessage = string.Empty;
                 return true;
             }
-            catch (Exception) { return false; }
+            catch (Exception) { ErrorMessage = "Check your network"; return false; }
         }
         #endregion
 
@@ -98,13 +100,13 @@ namespace ChatClient.ViewModels
                     Time = DateTime.Now,
                 };
                 SelectedParticipant.Chatter.Add(msg);
-                TextMessage = string.Empty;
+                Text = string.Empty;
             }
         }
 
         private bool CanSendTextMessage()
         {
-            return (!string.IsNullOrEmpty(TextMessage) && 
+            return (!string.IsNullOrEmpty(Text) && 
                 _selectedParticipant != null);
         }
         #endregion
@@ -147,6 +149,23 @@ namespace ChatClient.ViewModels
         //}
         #endregion
 
+        #region Properties
+        private string _errorMessage = string.Empty;
+        public string ErrorMessage
+        {
+            get
+            {
+                return _errorMessage;
+            }
+            set
+            {
+                _errorMessage = value;
+                OnPropertyChanged(nameof(ErrorMessage));
+                OnPropertyChanged(nameof(HasErrorMessage));
+            }
+        }
+
+        public bool HasErrorMessage => !string.IsNullOrEmpty(ErrorMessage);
 
         private string _userName;
         public string UserName
@@ -160,7 +179,7 @@ namespace ChatClient.ViewModels
         }
 
         private string _textMessage;
-        public string TextMessage
+        public string Text
         {
             get { return _textMessage; }
             set
@@ -169,6 +188,7 @@ namespace ChatClient.ViewModels
                 OnPropertyChanged();
             }
         }
+        private ObservableCollection<Participant> _participants = new ObservableCollection<Participant>();
 
         public ObservableCollection<Participant> Participants
         {
@@ -191,15 +211,16 @@ namespace ChatClient.ViewModels
                 OnPropertyChanged();
             }
         }
-
+        #endregion
         public ChatViewModel(ChatService service)
         {
             _chatService = service;
             _chatService.ParticipantTyping += Typing;
             _chatService.NewTextMessage += NewTextMessage;
             _chatService.NewImageMessage += NewImageMessage;
+            ConnectCommand.Execute(null);
         }
-
+        #region Methods
         private void NewImageMessage(string name, byte[] pic)
         {
             var imgsDirectory = Path.Combine(Environment.CurrentDirectory, "Image Messages");
@@ -245,5 +266,6 @@ namespace ChatClient.ViewModels
                 Observable.Timer(TimeSpan.FromMilliseconds(1500)).Subscribe(t => person.IsTyping = false);
             }
         }
+        #endregion
     }
 }

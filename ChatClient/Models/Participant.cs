@@ -13,6 +13,15 @@ namespace ChatClient.Models
         public string Name { get; set; }
         public ObservableCollection<Message> Chatter { get; set; }
 
+        public string LastMessage
+        {
+            get => Chatter.Last().Text;
+        }
+
+        public string LastMessageTime
+        {
+            get => Chatter.Last().Time.ToString("HH:mm");
+        }
 
         private bool _hasSentNewMessage;
         public bool HasSentNewMessage

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ChatClient.Models.Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -8,20 +9,20 @@ using System.Threading.Tasks;
 
 namespace ChatClient.Models
 {
-    public class Participant: INotifyPropertyChanged
+    public class Participant: Entity, INotifyPropertyChanged
     {
         public string Name { get; set; }
-        public ObservableCollection<Message> Chatter { get; set; }
+        public ObservableCollection<Message> Chatter { get; set; } = new ObservableCollection<Message>();
 
-        public string LastMessage
-        {
-            get => Chatter.Last().Text;
-        }
+        //public string LastMessage
+        //{
+        //    get => Chatter?.Last().Text;
+        //}
 
-        public string LastMessageTime
-        {
-            get => Chatter.Last().Time.ToString("HH:mm");
-        }
+        //public string LastMessageTime
+        //{
+        //    get => Chatter?.Last().Time.ToString("HH:mm");
+        //}
 
         private bool _hasSentNewMessage;
         public bool HasSentNewMessage

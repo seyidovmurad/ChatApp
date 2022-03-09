@@ -40,5 +40,21 @@ namespace ChatServerCS
             User client = User.FirstOrDefault(user => user.Name == recepient);
             Clients.Client(client.ID).ParticipantTyping(sender);
         }
+
+        public List<User> Login(string name)
+        {
+            if (!User.Select(u => u.Name).Contains(name))
+            {
+                Console.WriteLine($"++ {name} logged in");
+                User newUser = new User { Name = name, ID = Context.ConnectionId};
+                User.Add(newUser); 
+                Clients.CallerState.UserName = name; //Hal hazirda app-e login eden
+                Clients.Others.ParticipantLogin(newUser);
+                return User.ToList();
+            }
+            return null;
+        }
+
+
     }
 }

@@ -30,13 +30,16 @@
                     Margin="10,16,10,16">
                     <TextBox 
                         BorderThickness="0"
-                        Text="Search"
+                        Text= "{Binding UserName, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
                         VerticalContentAlignment="Center"
                         Padding="5,0,0,0"
                         FontSize="14"
                         DockPanel.Dock="Right"
-                        Foreground="#FFA2A2A2"/>
+                        Foreground="#FFA2A2A2" Width="90"/>
                 </Border>
+
+                <Button Command="{Binding LoginCommand}" Content="Add" Width="122"/>
+                
             </DockPanel>
             <!--Users List-->
             <ListView 
@@ -44,7 +47,8 @@
                 HorizontalContentAlignment="Stretch"
                 BorderThickness="0" 
                 Grid.Row="1" 
-                ItemsSource="{Binding Participants}">
+                ItemsSource="{Binding Doctors, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}"
+                SelectedItem="{Binding SelectedDoctor, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}">
                 <ListView.ItemTemplate>
                     <DataTemplate>
                         <Grid Height="50">
@@ -124,7 +128,7 @@
 
             <!--Chat List-->
             <ScrollViewer x:Name="ChatScroll" Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding MyMessage}" >
+                <ItemsControl ItemsSource="{Binding SelectedDoctor.Chatter, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" >
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel 
@@ -135,14 +139,14 @@
                                 Margin="5,6">
                                 <!--Text-->
                                 <TextBlock 
-                                    Text="{Binding Text}" 
+                                    Text="{Binding Text, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
                                     FontSize="16"
                                     Foreground="White"
                                     Padding="10,5,10,0"
                                     TextWrapping="Wrap"/>
                                 <!--Time-->
                                 <TextBlock 
-                                Text="{Binding Timer}" 
+                                Text="{Binding Time, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
                                 FontSize="8" 
                                 DockPanel.Dock="Bottom" 
                                 HorizontalAlignment="Right"

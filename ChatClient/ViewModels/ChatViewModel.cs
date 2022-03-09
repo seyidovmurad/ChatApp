@@ -1,6 +1,9 @@
 ﻿using ChatClient.Commands;
+using ChatClient.Data;
 using ChatClient.Models;
+using ChatClient.Models.Abstractions;
 using ChatClient.Services;
+using Microsoft.EntityFrameworkCore;
 using PropertyChanged;
 using System;
 using System.Collections.Generic;
@@ -10,17 +13,43 @@ using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace ChatClient.ViewModels
 {
+
+    public static class ChatViewModelExtensions
+    {
+        public static void DetachLocal<T>(this DbContext context, T t, string entryId)
+    where T : Entity
+        {
+            var local = context.Set<T>()
+                .Local
+                .FirstOrDefault(entry => entry.Id.Equals(entryId));
+            if (local != null)
+            {
+                context.Entry(local).State = EntityState.Detached;
+            }
+            context.Entry(t).State = EntityState.Modified;
+        }
+    }
+
     [AddINotifyPropertyChangedInterface]
-    public class ChatViewModel: BaseViewModel
+    public class ChatViewModel : BaseViewModel
     {
         private readonly IChatService _chatService;
+        private TaskFactory ctxTaskFactory;
+        public AppDbContext dbContext { get; set; }
 
+        Thread t;
 
+        Random rand = new Random();
+
+        public string Id { get; set; }
 
         #region Connect
         private ICommand _connectCommand;
@@ -44,31 +73,77 @@ namespace ChatClient.ViewModels
         }
         #endregion
 
-        #region Typing Command
-        private ICommand _typingCommand;
-        public ICommand TypingCommand
+        #region Login Command
+        private ICommand _loginCommand;
+        public ICommand LoginCommand
         {
             get
             {
-                return _typingCommand ?? (_typingCommand =
-                    new RelayCommandAsync(() => Typing(), (o) => CanUseTypingCommand()));
+                return _loginCommand ?? (_loginCommand =
+                    new RelayCommandAsync(() => Login(), (o) => CanLogin()));
             }
         }
 
-        private async Task<bool> Typing()
+        private async Task<bool> Login()
         {
+            var rand = new Random();
             try
             {
-                await _chatService.TypingAsync(SelectedParticipant.Name);
-                return true;
+                List<User> users = new List<User>();
+                foreach (var doc in Doctors)
+                {
+                    await _chatService.LoginAsync(doc.Name);
+                }
+                users = await _chatService.LoginAsync(_userName);
+                if (users != null)
+                {
+                    users.ForEach(u => Participants.Add(new Participant { Name = u.Name, Id = Id }));
+                    if (Participants.Where(p => p.Name == _userName).Count() == 1)
+                    {
+                        dbContext.Add(new Participant() { Name = UserName, Id = Id });
+                        dbContext.SaveChanges();
+                    }
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
             }
             catch (Exception) { return false; }
         }
 
-        private bool CanUseTypingCommand()
+        private bool CanLogin()
         {
             return true;
         }
+        #endregion
+
+        #region Typing Command
+        //private ICommand _typingCommand;
+        //public ICommand TypingCommand
+        //{
+        //    get
+        //    {
+        //        return _typingCommand ?? (_typingCommand =
+        //            new RelayCommandAsync(() => Typing(), (o) => CanUseTypingCommand()));
+        //    }
+        //}
+
+        //private async Task<bool> Typing()
+        //{
+        //    try
+        //    {
+        //        await _chatService.TypingAsync(SelectedParticipant.Name);
+        //        return true;
+        //    }
+        //    catch (Exception) { return false; }
+        //}
+
+        //private bool CanUseTypingCommand()
+        //{
+        //    return true;
+        //}
         #endregion
 
         #region Send Text Message Command
@@ -86,7 +161,7 @@ namespace ChatClient.ViewModels
         {
             try
             {
-                var recepient = _selectedParticipant.Name;
+                var recepient = SelectedDoctor.Name;
                 await _chatService.SendUnicastMessageAsync(recepient, _textMessage);
                 return true;
             }
@@ -95,19 +170,23 @@ namespace ChatClient.ViewModels
             {
                 Message msg = new Message
                 {
+                    Id = Id,
                     Author = UserName,
                     Text = _textMessage,
                     Time = DateTime.Now,
+                    Doctor = SelectedDoctor,
+                    User = Participants.FirstOrDefault(p => p.Name == UserName)
                 };
-                SelectedParticipant.Chatter.Add(msg);
+                SelectedDoctor.Chatter.Add(msg);
+                dbContext.DetachLocal<Message>(msg, msg.Id);
+                dbContext.Add(msg);
                 Text = string.Empty;
             }
         }
 
         private bool CanSendTextMessage()
         {
-            return (!string.IsNullOrEmpty(Text) && 
-                _selectedParticipant != null);
+            return true;
         }
         #endregion
 
@@ -127,7 +206,7 @@ namespace ChatClient.ViewModels
         //    var pic = dialogService.OpenFile("Select image file", "Images (*.jpg;*.png)|*.jpg;*.png");
         //    if (string.IsNullOrEmpty(pic)) return false;
 
-        //    var img = await Task.Run(() => File.ReadAllBytes(pic));
+        //    var img = await ctxTaskFactory.StartNew(() => File.ReadAllBytes(pic));
 
         //    try
         //    {
@@ -167,6 +246,7 @@ namespace ChatClient.ViewModels
 
         public bool HasErrorMessage => !string.IsNullOrEmpty(ErrorMessage);
 
+
         private string _userName;
         public string UserName
         {
@@ -188,7 +268,8 @@ namespace ChatClient.ViewModels
                 OnPropertyChanged();
             }
         }
-        private ObservableCollection<Participant> _participants = new ObservableCollection<Participant>();
+
+        private ObservableCollection<Participant> _participants;
 
         public ObservableCollection<Participant> Participants
         {
@@ -200,26 +281,51 @@ namespace ChatClient.ViewModels
             }
         }
 
-        private Participant _selectedParticipant;
-        public Participant SelectedParticipant
+        private ObservableCollection<Doctor> _doctors;
+
+        public ObservableCollection<Doctor> Doctors
         {
-            get { return _selectedParticipant; }
+            get { return _doctors; }
             set
             {
-                _selectedParticipant = value;
-                if (SelectedParticipant.HasSentNewMessage) SelectedParticipant.HasSentNewMessage = false;
+                _doctors = value;
+                OnPropertyChanged();
+            }
+        }
+
+        private Doctor _selectedDoctor;
+        public Doctor SelectedDoctor
+        {
+            get { return _selectedDoctor; }
+            set
+            {
+                _selectedDoctor = value;
                 OnPropertyChanged();
             }
         }
         #endregion
+
         public ChatViewModel(ChatService service)
         {
             _chatService = service;
             _chatService.ParticipantTyping += Typing;
             _chatService.NewTextMessage += NewTextMessage;
             _chatService.NewImageMessage += NewImageMessage;
+            _chatService.ParticipantLoggedIn += ParticipantLogin;
             ConnectCommand.Execute(null);
+
+            ctxTaskFactory = new TaskFactory(TaskScheduler.FromCurrentSynchronizationContext());
+
+            dbContext = new AppDbContext();
+
+            Participants = new ObservableCollection<Participant>(dbContext.Participants.Include(r => r.Chatter).ThenInclude(rs => rs.Doctor).ToList());
+            Doctors = new ObservableCollection<Doctor>(dbContext.Doctors.Include(r => r.Chatter).ThenInclude(rs => rs.User).ToList());
+
+
+            Id = rand.Next(1, 100000).ToString();
+
         }
+
         #region Methods
         private void NewImageMessage(string name, byte[] pic)
         {
@@ -236,35 +342,58 @@ namespace ChatClient.ViewModels
             }
 
             Message cm = new Message { Author = name, Picture = imgPath, Time = DateTime.Now };
-            var sender = _participants.Where(u => string.Equals(u.Name, name)).FirstOrDefault();
-            Task.Run(() => sender.Chatter.Add(cm)).Wait();
+            var sender = Participants.Where(u => string.Equals(u.Name, name)).FirstOrDefault();
+            ctxTaskFactory.StartNew(() => sender.Chatter.Add(cm)).Wait();
 
-            if (!(SelectedParticipant != null && sender.Name.Equals(SelectedParticipant.Name)))
-            {
-                Task.Run(() => sender.HasSentNewMessage = true).Wait();
-            }
+            //if (!(SelectedParticipant != null && sender.Name.Equals(SelectedParticipant.Name)))
+            //{
+            //    ctxTaskFactory.StartNew(() => sender.HasSentNewMessage = true).Wait();
+            //}
         }
 
         private void NewTextMessage(string name, string msg)
         {
-            Message cm = new Message{ Author = name, Text = msg, Time = DateTime.Now };
-            var sender = _participants.Where((u) => string.Equals(u.Name, name)).FirstOrDefault();
-            Task.Run(() => sender.Chatter.Add(cm)).Wait();
+            var sender = Participants.Where((u) => string.Equals(u.Name, name)).FirstOrDefault();
+            var user = Doctors.FirstOrDefault(p => p.Name == SelectedDoctor.Name);
+            Message cm = new Message { Author = name, Text = msg, Time = DateTime.Now, Doctor = user, User = sender, Id = Id };
+            ctxTaskFactory.StartNew(() => sender.Chatter.Add(cm)).Wait();
+            //ctxTaskFactory.StartNew(() =>
+            //{
+            //    dbContext.Add(cm);
+            //});
 
-            if (!(SelectedParticipant != null && sender.Name.Equals(SelectedParticipant.Name)))
-            {
-                Task.Run(() => sender.HasSentNewMessage = true).Wait();
-            }
+            //dbContext.SaveChanges();
+
+            //if (!(SelectedParticipant != null && sender.Name.Equals(SelectedParticipant.Name)))
+            //{
+            //    ctxTaskFactory.StartNew(() => sender.HasSentNewMessage = true).Wait();
+            //}
         }
 
         private void Typing(string name)
         {
-            var person = Participants.Where((p) => string.Equals(p.Name, name)).FirstOrDefault();
-            if (person != null && !person.IsTyping)
-            {
-                person.IsTyping = true;
-                Observable.Timer(TimeSpan.FromMilliseconds(1500)).Subscribe(t => person.IsTyping = false);
-            }
+            //var person = Participants.Where((p) => string.Equals(p.Name, name)).FirstOrDefault();
+            //if (person != null && !person.IsTyping)
+            //{
+            //    person.IsTyping = true;
+            //    Observable.Timer(TimeSpan.FromMilliseconds(1500)).Subscribe(t => person.IsTyping = false);
+            //}
+        }
+
+        private void ParticipantLogin(User u)
+        {
+
+            //var ptp = Participants.FirstOrDefault(p => string.Equals(p.Name, u.Name));
+
+            //ctxTaskFactory.StartNew(() => Participants.Add(new Participant
+            //{
+            //    Name = u.Name,
+            //    Id = Id
+            //})).Wait();
+
+            //dbContext.Participants.Add(new Participant { Name = u.Name, Id = Id });
+            //dbContext.SaveChanges();
+
         }
         #endregion
     }

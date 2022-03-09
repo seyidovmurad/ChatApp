@@ -5,7 +5,7 @@ VisualStudioVersion = 17.1.32210.238
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ChatClient", "ChatClient\ChatClient.csproj", "{312F012D-CF39-4A1D-BC88-1B1A9AD5D60D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatServerCS", "..\..\..\Downloads\SignalChat-master\ChatServerCS\ChatServerCS.csproj", "{8F197D7D-5CC4-41C3-A802-13C62D56E778}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ChatServerCS", "ChatServerCS\ChatServerCS.csproj", "{8F197D7D-5CC4-41C3-A802-13C62D56E778}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -12,11 +12,11 @@ namespace ChatClient.Models
         public string Text { get; set; }
         public string Author { get; set; }
         public DateTime Time { get; set; }
-        public string Picture { get; set; }
+        public string? Picture { get; set; }
 
         ////////
         ///
-        
+
         public string UserId { get; set; }
 
         public Participant User { get; set; }

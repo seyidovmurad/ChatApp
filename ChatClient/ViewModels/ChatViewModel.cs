@@ -22,21 +22,6 @@ using System.Windows.Threading;
 namespace ChatClient.ViewModels
 {
 
-    public static class ChatViewModelExtensions
-    {
-        public static void DetachLocal<T>(this DbContext context, T t, string entryId)
-    where T : Entity
-        {
-            var local = context.Set<T>()
-                .Local
-                .FirstOrDefault(entry => entry.Id.Equals(entryId));
-            if (local != null)
-            {
-                context.Entry(local).State = EntityState.Detached;
-            }
-            context.Entry(t).State = EntityState.Modified;
-        }
-    }
 
     [AddINotifyPropertyChangedInterface]
     public class ChatViewModel : BaseViewModel
@@ -170,7 +155,6 @@ namespace ChatClient.ViewModels
             {
                 Message msg = new Message
                 {
-                    Id = Id,
                     Author = UserName,
                     Text = _textMessage,
                     Time = DateTime.Now,
@@ -178,8 +162,9 @@ namespace ChatClient.ViewModels
                     User = Participants.FirstOrDefault(p => p.Name == UserName)
                 };
                 SelectedDoctor.Chatter.Add(msg);
-                dbContext.DetachLocal<Message>(msg, msg.Id);
+                //dbContext.DetachLocal<Message>(msg, msg.Id);
                 dbContext.Add(msg);
+                dbContext.SaveChanges();
                 Text = string.Empty;
             }
         }
@@ -353,15 +338,15 @@ namespace ChatClient.ViewModels
 
         private void NewTextMessage(string name, string msg)
         {
-            var sender = Participants.Where((u) => string.Equals(u.Name, name)).FirstOrDefault();
-            var user = Doctors.FirstOrDefault(p => p.Name == SelectedDoctor.Name);
-            Message cm = new Message { Author = name, Text = msg, Time = DateTime.Now, Doctor = user, User = sender, Id = Id };
-            ctxTaskFactory.StartNew(() => sender.Chatter.Add(cm)).Wait();
+            //var sender = Participants.Where((u) => string.Equals(u.Name, name)).FirstOrDefault();
+            //var user = Doctors.FirstOrDefault(p => p.Name == SelectedDoctor.Name);
+            //Message cm = new Message { Author = name, Text = msg, Time = DateTime.Now, Doctor = user, User = sender };
+            //ctxTaskFactory.StartNew(() => sender.Chatter.Add(cm)).Wait();
+
             //ctxTaskFactory.StartNew(() =>
             //{
             //    dbContext.Add(cm);
             //});
-
             //dbContext.SaveChanges();
 
             //if (!(SelectedParticipant != null && sender.Name.Equals(SelectedParticipant.Name)))
@@ -369,6 +354,7 @@ namespace ChatClient.ViewModels
             //    ctxTaskFactory.StartNew(() => sender.HasSentNewMessage = true).Wait();
             //}
         }
+
 
         private void Typing(string name)
         {
@@ -398,3 +384,4 @@ namespace ChatClient.ViewModels
         #endregion
     }
 }
+

@@ -7,7 +7,5 @@
         void UnicastPictureMessage(string sender, byte[] img);
         void ParticipantTyping(string sender);
 
-
-
     }
 }

@@ -30,8 +30,6 @@ namespace ChatClient.ViewModels
         private TaskFactory ctxTaskFactory;
         public AppDbContext dbContext { get; set; }
 
-        Thread t;
-
         Random rand = new Random();
 
         public string Id { get; set; }
@@ -71,29 +69,40 @@ namespace ChatClient.ViewModels
 
         private async Task<bool> Login()
         {
-            var rand = new Random();
             try
             {
-                List<User> users = new List<User>();
+                //List<User> users = new List<User>();
+
+                await _chatService.LoginAsync(_userName);
+
+                //users = await _chatService.LoginAsync(_userName);
+
+                //users.ForEach(u => Participants.Add(new Participant { Name = u.Name, Id = Id })); //Serverde olan istifadecileri bura doldurur.
+
+                if (Participants.FirstOrDefault(p => p.Name == UserName) == null)
+                {
+                    Participant newP = new Participant() { Name = UserName, Id = Id };
+
+                    LoggedUser = newP;
+
+                    dbContext.Add(newP);
+
+                    dbContext.SaveChanges();
+                }
+                else
+                {
+                    LoggedUser = Participants.FirstOrDefault(p => p.Name == UserName);
+                }
+
+                Doctors = new ObservableCollection<Doctor>(dbContext.Doctors.Include(r => r.Chatter).ThenInclude(rs => rs.User).ToList());
+
+
                 foreach (var doc in Doctors)
                 {
                     await _chatService.LoginAsync(doc.Name);
                 }
-                users = await _chatService.LoginAsync(_userName);
-                if (users != null)
-                {
-                    users.ForEach(u => Participants.Add(new Participant { Name = u.Name, Id = Id }));
-                    if (Participants.Where(p => p.Name == _userName).Count() == 1)
-                    {
-                        dbContext.Add(new Participant() { Name = UserName, Id = Id });
-                        dbContext.SaveChanges();
-                    }
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+
+                return true;
             }
             catch (Exception) { return false; }
         }
@@ -162,7 +171,6 @@ namespace ChatClient.ViewModels
                     User = Participants.FirstOrDefault(p => p.Name == UserName)
                 };
                 SelectedDoctor.Chatter.Add(msg);
-                //dbContext.DetachLocal<Message>(msg, msg.Id);
                 dbContext.Add(msg);
                 dbContext.SaveChanges();
                 Text = string.Empty;
@@ -288,6 +296,17 @@ namespace ChatClient.ViewModels
                 OnPropertyChanged();
             }
         }
+
+        private Participant _loggedUser;
+        public Participant LoggedUser
+        {
+            get { return _loggedUser; }
+            set
+            {
+                _loggedUser = value;
+                OnPropertyChanged();
+            }
+        }
         #endregion
 
         public ChatViewModel(ChatService service)
@@ -304,8 +323,6 @@ namespace ChatClient.ViewModels
             dbContext = new AppDbContext();
 
             Participants = new ObservableCollection<Participant>(dbContext.Participants.Include(r => r.Chatter).ThenInclude(rs => rs.Doctor).ToList());
-            Doctors = new ObservableCollection<Doctor>(dbContext.Doctors.Include(r => r.Chatter).ThenInclude(rs => rs.User).ToList());
-
 
             Id = rand.Next(1, 100000).ToString();
 
